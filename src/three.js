@@ -1,8 +1,13 @@
-/**
- * @license
- * Copyright 2010-2023 Three.js Authors
- * SPDX-License-Identifier: MIT
- */
+/*
+Cyrus Amalan
+camalan@ucsc.edu
+Lots of functions implemented but not used from trail and error. Used lots of referencing code
+from three.js.org, wikipedia.org, github.com, https://www.realtimerendering.com/, https://mygit.top/, and
+https://2019-spring-web-dev.readthedocs.io/en/latest/. Functions that are actually implemented are called from the 
+asg5.html file.
+*/
+
+
 const REVISION = '164dev';
 
 const MOUSE = { LEFT: 0, MIDDLE: 1, RIGHT: 2, ROTATE: 0, DOLLY: 1, PAN: 2 };
@@ -1168,17 +1173,6 @@ function warnOnce( message ) {
 
 }
 
-/**
- * Matrices converting P3 <-> Rec. 709 primaries, without gamut mapping
- * or clipping. Based on W3C specifications for sRGB and Display P3,
- * and ICC specifications for the D50 connection space. Values in/out
- * are _linear_ sRGB and _linear_ Display P3.
- *
- * Note that both sRGB and Display P3 use the sRGB transfer functions.
- *
- * Reference:
- * - http://www.russellcottrell.com/photo/matrixCalculator.htm
- */
 
 const LINEAR_SRGB_TO_LINEAR_DISPLAY_P3 = /*@__PURE__*/ new Matrix3().set(
 	0.8224621, 0.177538, 0.0,
@@ -1599,7 +1593,7 @@ class Texture extends EventDispatcher {
 		this.generateMipmaps = true;
 		this.premultiplyAlpha = false;
 		this.flipY = true;
-		this.unpackAlignment = 4;	// valid values: 1, 2, 4, 8 (see http://www.khronos.org/opengles/sdk/docs/man/xhtml/glPixelStorei.xml)
+		this.unpackAlignment = 4;	
 
 		this.colorSpace = colorSpace;
 
@@ -2115,10 +2109,6 @@ class Vector4 {
 
 	setAxisAngleFromQuaternion( q ) {
 
-		// http://www.euclideanspace.com/maths/geometry/rotations/conversions/quaternionToAngle/index.htm
-
-		// q is assumed to be normalized
-
 		this.w = 2 * Math.acos( q.w );
 
 		const s = Math.sqrt( 1 - q.w * q.w );
@@ -2143,9 +2133,7 @@ class Vector4 {
 
 	setAxisAngleFromRotationMatrix( m ) {
 
-		// http://www.euclideanspace.com/maths/geometry/rotations/conversions/matrixToAngle/index.htm
 
-		// assumes the upper 3x3 of m is a pure rotation matrix (i.e, unscaled)
 
 		let angle, x, y, z; // variables for result
 		const epsilon = 0.01,		// margin to allow for rounding errors
@@ -2708,13 +2696,7 @@ class Data3DTexture extends Texture {
 
 	constructor( data = null, width = 1, height = 1, depth = 1 ) {
 
-		// We're going to add .setXXX() methods for setting properties later.
-		// Users can still set in DataTexture3D directly.
-		//
-		//	const texture = new THREE.DataTexture3D( data, width, height, depth );
-		// 	texture.anisotropy = 16;
-		//
-		// See #14839
+	
 
 		super( null );
 
@@ -2955,10 +2937,7 @@ class Quaternion {
 
 		const x = euler._x, y = euler._y, z = euler._z, order = euler._order;
 
-		// http://www.mathworks.com/matlabcentral/fileexchange/
-		// 	20696-function-to-convert-between-dcm-euler-angles-quaternions-and-euler-vectors/
-		//	content/SpinCalc.m
-
+	
 		const cos = Math.cos;
 		const sin = Math.sin;
 
@@ -3027,7 +3006,6 @@ class Quaternion {
 
 	setFromAxisAngle( axis, angle ) {
 
-		// http://www.euclideanspace.com/maths/geometry/rotations/conversions/angleToQuaternion/index.htm
 
 		// assumes axis is normalized
 
@@ -3046,7 +3024,6 @@ class Quaternion {
 
 	setFromRotationMatrix( m ) {
 
-		// http://www.euclideanspace.com/maths/geometry/rotations/conversions/matrixToQuaternion/index.htm
 
 		// assumes the upper 3x3 of m is a pure rotation matrix (i.e, unscaled)
 
@@ -3251,7 +3228,6 @@ class Quaternion {
 
 	multiplyQuaternions( a, b ) {
 
-		// from http://www.euclideanspace.com/maths/algebra/realNormedAlgebra/quaternions/code/index.htm
 
 		const qax = a._x, qay = a._y, qaz = a._z, qaw = a._w;
 		const qbx = b._x, qby = b._y, qbz = b._z, qbw = b._w;
@@ -3274,7 +3250,6 @@ class Quaternion {
 
 		const x = this._x, y = this._y, z = this._z, w = this._w;
 
-		// http://www.euclideanspace.com/maths/algebra/realNormedAlgebra/quaternions/slerp/
 
 		let cosHalfTheta = w * qb._w + x * qb._x + y * qb._y + z * qb._z;
 
@@ -3343,12 +3318,6 @@ class Quaternion {
 	}
 
 	random() {
-
-		// sets this quaternion to a uniform random unit quaternnion
-
-		// Ken Shoemake
-		// Uniform random rotations
-		// D. Kirk, editor, Graphics Gems III, pages 124-132. Academic Press, New York, 1992.
 
 		const theta1 = 2 * Math.PI * Math.random();
 		const theta2 = 2 * Math.PI * Math.random();
@@ -4129,7 +4098,6 @@ class Vector3 {
 
 	randomDirection() {
 
-		// https://mathworld.wolfram.com/SpherePointPicking.html
 
 		const theta = Math.random() * Math.PI * 2;
 		const u = Math.random() * 2 - 1;
@@ -5034,7 +5002,6 @@ class Matrix4 {
 		const n41 = te[ 3 ], n42 = te[ 7 ], n43 = te[ 11 ], n44 = te[ 15 ];
 
 		//TODO: make this more efficient
-		//( based on http://www.euclideanspace.com/maths/algebra/matrix/functions/inverse/fourD/index.htm )
 
 		return (
 			n41 * (
@@ -5115,7 +5082,6 @@ class Matrix4 {
 
 	invert() {
 
-		// based on http://www.euclideanspace.com/maths/algebra/matrix/functions/inverse/fourD/index.htm
 		const te = this.elements,
 
 			n11 = te[ 0 ], n21 = te[ 1 ], n31 = te[ 2 ], n41 = te[ 3 ],
@@ -5267,7 +5233,6 @@ class Matrix4 {
 
 	makeRotationAxis( axis, angle ) {
 
-		// Based on http://www.gamedev.net/reference/articles/article1199.asp
 
 		const c = Math.cos( angle );
 		const s = Math.sin( angle );
@@ -6956,8 +6921,7 @@ class Triangle {
 
 	}
 
-	// static/instance method to calculate barycentric coordinates
-	// based on: http://www.blackpawn.com/texts/pointinpoly/default.html
+
 	static getBarycoord( point, a, b, c, target ) {
 
 		_v0$1.subVectors( c, a );
@@ -7141,11 +7105,6 @@ class Triangle {
 		const a = this.a, b = this.b, c = this.c;
 		let v, w;
 
-		// algorithm thanks to Real-Time Collision Detection by Christer Ericson,
-		// published by Morgan Kaufmann Publishers, (c) 2005 Elsevier Inc.,
-		// under the accompanying license; see chapter 5.1.5 for detailed explanation.
-		// basically, we're distinguishing which of the voronoi regions of the triangle
-		// the point lies in with the minimum amount of redundant computation.
 
 		_vab.subVectors( b, a );
 		_vac.subVectors( c, a );
@@ -7652,7 +7611,6 @@ class Color {
 
 		if ( colorSpace !== SRGBColorSpace ) {
 
-			// Requires CSS Color Module Level 4 (https://www.w3.org/TR/css-color-4/).
 			return `color(${ colorSpace } ${ r.toFixed( 3 ) } ${ g.toFixed( 3 ) } ${ b.toFixed( 3 ) })`;
 
 		}
@@ -9690,7 +9648,6 @@ class BufferGeometry extends EventDispatcher {
 		const index = this.index;
 		const attributes = this.attributes;
 
-		// based on http://www.terathon.com/code/tangent.html
 		// (per vertex tangents)
 
 		if ( index === null ||
@@ -10967,12 +10924,10 @@ function getUnlitUniformColorSpace( renderer ) {
 
 	if ( currentRenderTarget === null ) {
 
-		// https://github.com/mrdoob/three.js/pull/23937#issuecomment-1111067398
 		return renderer.outputColorSpace;
 
 	}
 
-	// https://github.com/mrdoob/three.js/issues/27868
 	if ( currentRenderTarget.isXRRenderTarget === true ) {
 
 		return currentRenderTarget.texture.colorSpace;
@@ -11286,23 +11241,6 @@ class PerspectiveCamera extends Camera {
 
 	}
 
-	/**
-	 * Sets the FOV by focal length in respect to the current .filmGauge.
-	 *
-	 * The default film gauge is 35, so that the focal length can be specified for
-	 * a 35mm (full frame) camera.
-	 *
-	 * Values for focal length and film gauge must have the same unit.
-	 */
-	setFocalLength( focalLength ) {
-
-		/** see {@link http://www.bobatkins.com/photography/technical/field_of_view.html} */
-		const vExtentSlope = 0.5 * this.getFilmHeight() / focalLength;
-
-		this.fov = RAD2DEG * 2 * Math.atan( vExtentSlope );
-		this.updateProjectionMatrix();
-
-	}
 
 	/**
 	 * Calculates the focal length from the current .fov and .filmGauge.
@@ -15079,20 +15017,6 @@ const _axisDirections = [
 	/*@__PURE__*/ new Vector3( PHI, INV_PHI, 0 ),
 	/*@__PURE__*/ new Vector3( - PHI, INV_PHI, 0 ) ];
 
-/**
- * This class generates a Prefiltered, Mipmapped Radiance Environment Map
- * (PMREM) from a cubeMap environment texture. This allows different levels of
- * blur to be quickly accessed based on material roughness. It is packed into a
- * special CubeUV format that allows us to perform custom interpolation so that
- * we can support nonlinear formats such as RGBE. Unlike a traditional mipmap
- * chain, it only goes down to the LOD_MIN level (above), and then creates extra
- * even more filtered 'mips' at the same LOD_MIN resolution, associated with
- * higher roughness levels. In this way we maintain resolution to smoothly
- * interpolate diffuse lighting while limiting sampling computation.
- *
- * Paper: Fast, Accurate Image-Based Lighting
- * https://drive.google.com/file/d/15y8r_UpKlU9SvV4ILb0C3qCPecS8pvLz/view
-*/
 
 class PMREMGenerator {
 
@@ -15115,13 +15039,7 @@ class PMREMGenerator {
 
 	}
 
-	/**
-	 * Generates a PMREM from a supplied Scene, which can be faster than using an
-	 * image if networking bandwidth is low. Optional sigma specifies a blur radius
-	 * in radians to be applied to the scene before PMREM generation. Optional near
-	 * and far planes ensure the scene is rendered in its entirety (the cubeCamera
-	 * is placed at the origin).
-	 */
+	
 	fromScene( scene, sigma = 0, near = 0.1, far = 100 ) {
 
 		_oldTarget = this._renderer.getRenderTarget();
@@ -16838,48 +16756,6 @@ class DepthTexture extends Texture {
 
 }
 
-/**
- * Uniforms of a program.
- * Those form a tree structure with a special top-level container for the root,
- * which you get by calling 'new WebGLUniforms( gl, program )'.
- *
- *
- * Properties of inner nodes including the top-level container:
- *
- * .seq - array of nested uniforms
- * .map - nested uniforms by name
- *
- *
- * Methods of all nodes except the top-level container:
- *
- * .setValue( gl, value, [textures] )
- *
- * 		uploads a uniform value(s)
- *  	the 'textures' parameter is needed for sampler uniforms
- *
- *
- * Static methods of the top-level container (textures factorizations):
- *
- * .upload( gl, seq, values, textures )
- *
- * 		sets uniforms in 'seq' to 'values[id].value'
- *
- * .seqWithValue( seq, values ) : filteredSeq
- *
- * 		filters 'seq' entries with corresponding entry in values
- *
- *
- * Methods of the top-level container (textures factorizations):
- *
- * .setValue( gl, name, value, textures )
- *
- * 		sets uniform with  name 'name' to 'value'
- *
- * .setOptional( gl, obj, prop )
- *
- * 		like .set for an optional property of the object
- *
- */
 
 
 const emptyTexture = /*@__PURE__*/ new Texture();
@@ -16911,8 +16787,6 @@ function flatten( array, nBlocks, blockSize ) {
 	const firstElem = array[ 0 ];
 
 	if ( firstElem <= 0 || firstElem > 0 ) return array;
-	// unoptimized: ! isNaN( firstElem )
-	// see http://jacksondunstan.com/articles/983
 
 	const n = nBlocks * blockSize;
 	let r = arrayCacheF32[ n ];
@@ -17998,7 +17872,6 @@ function WebGLShader( gl, type, string ) {
 
 }
 
-// From https://www.khronos.org/registry/webgl/extensions/KHR_parallel_shader_compile/
 const COMPLETION_STATUS_KHR = 0x91B1;
 
 let programIdCount = 0;
@@ -25740,12 +25613,7 @@ class WebXRManager extends EventDispatcher {
 		const cameraLPos = new Vector3();
 		const cameraRPos = new Vector3();
 
-		/**
-		 * Assumes 2 cameras that are parallel and share an X-axis, and that
-		 * the cameras' projection and world matrices have already been set.
-		 * And that near and far planes are identical for both cameras.
-		 * Visualization of this technique: https://computergraphics.stackexchange.com/a/4765
-		 */
+
 		function setProjectionFromUnion( camera, cameraL, cameraR ) {
 
 			cameraLPos.setFromMatrixPosition( cameraL.matrixWorld );
@@ -28975,7 +28843,6 @@ class WebGLRenderer {
 
 				}
 
-				// consider moving isOrthographic to UniformLib and WebGLMaterials, see https://github.com/mrdoob/three.js/pull/26467#issuecomment-1645185067
 
 				if ( material.isMeshPhongMaterial ||
 					material.isMeshToonMaterial ||
@@ -29046,7 +28913,6 @@ class WebGLRenderer {
 
 			}
 
-			// https://github.com/mrdoob/three.js/pull/24467#issuecomment-1209031512
 
 			if ( material.isMeshGouraudMaterial && material.envMap !== null ) {
 
@@ -33814,25 +33680,7 @@ class ArcCurve extends EllipseCurve {
 
 }
 
-/**
- * Centripetal CatmullRom Curve - which is useful for avoiding
- * cusps and self-intersections in non-uniform catmull rom curves.
- * http://www.cemyuksel.com/research/catmullrom_param/catmullrom.pdf
- *
- * curve.type accepts centripetal(default), chordal and catmullrom
- * curve.tension is used for catmullrom which defaults to 0.5
- */
 
-
-/*
-Based on an optimized c++ solution in
- - http://stackoverflow.com/questions/9489736/catmull-rom-curve-with-no-cusps-and-no-self-intersections/
- - http://ideone.com/NoEbVM
-
-This CubicPoly class could be used for reusing some variables and calculations,
-but for three.js curve use, it could be possible inlined and flatten into a single function call
-which can be placed in CurveUtils.
-*/
 
 function CubicPoly() {
 
@@ -36375,9 +36223,6 @@ class Shape extends Path {
 
 }
 
-/**
- * Port from https://github.com/mapbox/earcut (v2.2.4)
- */
 
 const Earcut = {
 
@@ -37429,17 +37274,6 @@ class ExtrudeGeometry extends BufferGeometry {
 
 			function getBevelVec( inPt, inPrev, inNext ) {
 
-				// computes for inPt the corresponding point inPt' on a new contour
-				//   shifted by 1 unit (length of normalized vector) to the left
-				// if we walk along contour clockwise, this new contour is outside the old one
-				//
-				// inPt' is the intersection of the two lines parallel to the two
-				//  adjacent edges of inPt at a distance of 1 unit on the left side.
-
-				let v_trans_x, v_trans_y, shrink_by; // resulting translation vector for inPt
-
-				// good reading for geometry algorithms (here: line-line intersection)
-				// http://geomalgorithms.com/a05-_intersect-1.html
 
 				const v_prev_x = inPt.x - inPrev.x,
 					v_prev_y = inPt.y - inPrev.y;
@@ -40474,26 +40308,6 @@ const AnimationUtils = {
 	makeClipAdditive: makeClipAdditive
 };
 
-/**
- * Abstract base class of interpolants over parametric samples.
- *
- * The parameter domain is one dimensional, typically the time or a path
- * along a curve defined by the data.
- *
- * The sample values can have any dimensionality and derived classes may
- * apply special interpretations to the data.
- *
- * This class provides the interval seek in a Template Method, deferring
- * the actual interpolation to derived classes.
- *
- * Time complexity is O(1) for linear access crossing at most two points
- * and O(log N) for random access, where N is the number of positions.
- *
- * References:
- *
- * 		http://www.oodesign.com/template-method-pattern.html
- *
- */
 
 class Interpolant {
 
@@ -40527,10 +40341,7 @@ class Interpolant {
 
 				linear_scan: {
 
-					//- See http://jsperf.com/comparison-to-undefined/3
-					//- slower code:
-					//-
-					//- 				if ( t >= t1 || t1 === undefined ) {
+			
 					forward_scan: if ( ! ( t < t1 ) ) {
 
 						for ( let giveUpAt = i1 + 2; ; ) {
@@ -41598,12 +41409,7 @@ class AnimationClip {
 
 		const animationToMorphTargets = {};
 
-		// tested with https://regex101.com/ on trick sequences
-		// such flamingo_flyA_003, flamingo_run1_003, crdeath0059
-		const pattern = /^([\w-]*?)([\d]+)$/;
 
-		// sort morph target names into animation groups based
-		// patterns like Walk_001, Walk_002, Run_001, Run_002
 		for ( let i = 0, il = morphTargets.length; i < il; i ++ ) {
 
 			const morphTarget = morphTargets[ i ];
@@ -42282,8 +42088,7 @@ class FileLoader extends Loader {
 					const callbacks = loading[ url ];
 					const reader = response.body.getReader();
 
-					// Nginx needs X-File-Size check
-					// https://serverfault.com/questions/482875/why-does-nginx-remove-content-length-header-for-chunked-content
+		
 					const contentLength = response.headers.get( 'Content-Length' ) || response.headers.get( 'X-File-Size' );
 					const total = contentLength ? parseInt( contentLength ) : 0;
 					const lengthComputable = total !== 0;
@@ -50870,12 +50675,7 @@ class DirectionalLightHelper extends Object3D {
 const _vector = /*@__PURE__*/ new Vector3();
 const _camera = /*@__PURE__*/ new Camera();
 
-/**
- *	- shows frustum, line of sight and up of the camera
- *	- suitable for fast updates
- * 	- based on frustum visualization in lightgl.js shadowmap example
- *		https://github.com/evanw/lightgl.js/blob/master/tests/shadowmap.html
- */
+
 
 class CameraHelper extends LineSegments {
 
