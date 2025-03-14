@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My World</title>
+    <style>
+        body { margin: 0; }
+        canvas { 
+    width: 800px;     
+    height: 600px;     
+    display: block;
+    margin: 50px auto 0; 
+    border: 2px solid #000;  
+}
+ 
+        #textureSelector {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 100;
+        }
+
+    #fpsCounter {
+        position: absolute;
+        bottom: 10px;
+        left: 10px;
+        background-color: rgba(0, 0, 0, 0.7);
+        color: #ffffff;
+        font-family: Arial, sans-serif;
+        padding: 5px 10px;
+        border-radius: 5px;
+        font-size: 14px;
+    }
+    #toggleHemisphereLight {
+        position: absolute;
+        bottom: 300px;  /* Increase this value for higher position */
+        left: 420px;
+        background-color: rgba(0, 0, 0, 0.7);
+        color: #ffffff;
+        font-family: Arial, sans-serif;
+        padding: 5px 10px;
+        border-radius: 5px;
+        font-size: 14px;
+    }
+    #resetCamera{
+        position: absolute;
+        bottom: 300px;  /* Increase this value for higher position */
+        left: 520px;
+        background-color: rgba(0, 0, 0, 0.7);
+        color: #ffffff;
+        font-family: Arial, sans-serif;
+        padding: 5px 10px;
+        border-radius: 5px;
+        font-size: 14px;
+    }
+
+    #info {
+        position: absolute;
+        bottom: 330px;  /* Increase this value for higher position */
+        left: 520px;
+        background-color: rgb(255, 255, 255);
+        color: #000000;
+        font-family: Arial, sans-serif;
+        padding: 5px 10px;
+        border: none;   /* Ensures no border */
+        outline: none;  /* (Optional) Removes outline in case it's mistaken for a border */
+        border-radius: 5px;
+        font-size: 14px;
+    }
+    #toggleFog{
+        position: absolute;
+        bottom: 300px;  /* Increase this value for higher position */
+        left: 640px;
+        background-color: rgba(0, 0, 0, 0.7);
+        color: #ffffff;
+        font-family: Arial, sans-serif;
+        padding: 5px 10px;
+        border-radius: 5px;
+        font-size: 14px;
+    }
+
+
+    </style>
+</head>
+
+
+<body>
+
+<script type="module">
+    import * as THREE from './three.js';
+    import { OBJLoader } from '../lib/OBJLoader.js';
+    import { OrbitControls } from '../lib/OrbitControls.js';
+    import { PerspectiveCamera, WebGLRenderer, Scene } from './three.js';
+
+
+    const scene = new THREE.Scene();
+
+    //scene.fog = new THREE.FogExp2(0x87CEEB, 0.015); // Light blue fog for skybox effect
+
+    // Load and set the skybox
+    const loader = new THREE.CubeTextureLoader();
+    const skyboxTexture = loader.load([
+        '../images/sky.jpg',   // Right Side
+        '../images/sky.jpg',   // Left 
+        '../images/sky.jpg',   // Top 
+        '../images/sky.jpg',   // Bottom 
+        '../images/sky.jpg',   // Front 
+        '../images/sky.jpg'    // Back 
+    ]);
+    scene.background = skyboxTexture;
+
+    // FPS Counter Variables
+    let lastTime = performance.now();
+    let frameCount = 0;
+    let fpsDisplay = document.getElementById('fpsCounter');
+
+    function updateFPSCounter() {
+        const now = performance.now();
+        const delta = now - lastTime;
+        frameCount++;
+
+        if (delta >= 1000) {
+            const fps = Math.round((frameCount * 1000) / delta);
+            const msPerFrame = (delta / frameCount).toFixed(2);
+
+            fpsDisplay.innerHTML = `FPS: ${fps} | ${msPerFrame} ms`;
+
+            frameCount = 0;
+            lastTime = now;
+        }
+    }
+
+    function createBillboard(position = { x: 100, y: 150, z: 100 }) {
+    const textureLoader = new THREE.TextureLoader();
+    textureLoader.load('../images/billboard.png', function (texture) {
+        const billboardGeometry = new THREE.PlaneGeometry(100, 50);  // Width x Height
+        const billboardMaterial = new THREE.MeshBasicMaterial({ 
+            map: texture, 
+            side: THREE.DoubleSide, 
+            transparent: true 
+        });
+
+        const billboard = new THREE.Mesh(billboardGeometry, billboardMaterial);
+
+        // Always face the camera
+        billboard.onBeforeRender = function () {
+            billboard.lookAt(camera.position);
+        };
+
+        billboard.position.set(position.x, position.y, position.z);
+        scene.add(billboard);
+    });
+}
+
+
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 20, 60);
+
+    const renderer = new THREE.WebGLRenderer();
+    renderer.setSize(600, 400);  
+    document.body.appendChild(renderer.domElement);
+
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Smooth, soft shadows
+
+    scene.fog = new THREE.FogExp2(0x87CEEB, 0.0015); // Light blue fog for skybox effect
+renderer.setClearColor(scene.fog.color);         // Matches fog color for smoother blending
+
+// Fog Toggle Logic
+let isFogActive = true;
+
+
+
+    const infoDiv = document.createElement('div');
+    infoDiv.id = 'info';
+    infoDiv.innerHTML = `
+        <p>
+           Orbit Controls: <br>
+           Rotate camera around with mouse.<br>
+           Hold right click to move camera up/down<br>
+           Extras Added: Shadows, Fog, and Billboard
+        </p>
+    `;
+    document.body.appendChild(infoDiv);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true; // optional, for smoother control interaction
+    controls.dampingFactor = 0.002;
+
+    // Enable WASD movement
+    controls.listenToKeyEvents(window);  
+
+    controls.moveSpeed = 1.0;
+
+    const ambientLight = new THREE.AmbientLight(0x404040);
+    scene.add(ambientLight);
+
+
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+    directionalLight.position.set(5, 5, 5);
+    scene.add(directionalLight);
+
+    const pointLight = new THREE.PointLight(0xffffff, 1, 100);
+    pointLight.position.set(30, 30, 30);
+    scene.add(pointLight);
+
+    directionalLight.castShadow = true;
+    directionalLight.shadow.mapSize.width = 2048;
+    directionalLight.shadow.mapSize.height = 2048;
+    directionalLight.shadow.camera.near = 0.5;
+    directionalLight.shadow.camera.far = 500;
+
+    pointLight.castShadow = true;
+    pointLight.shadow.mapSize.width = 2048;
+    pointLight.shadow.mapSize.height = 2048;
+    pointLight.shadow.camera.near = 0.5;
+    pointLight.shadow.camera.far = 500;
+
+
+    // Light Cube (Simulating a Light Source)
+    const lightCubeGeo = new THREE.BoxGeometry(4, 4, 4); 
+    const lightCubeMat = new THREE.MeshPhongMaterial({
+        color: 0xffff00,
+        emissive: 0xffff00,
+        emissiveIntensity: 1.5
+    });
+    const lightCube = new THREE.Mesh(lightCubeGeo, lightCubeMat);
+    lightCube.position.copy(pointLight.position);
+    scene.add(lightCube);
+
+    //  Animate the Light Cube for Dynamic Movement
+    function animateLightCube() {
+        const time = Date.now() * 0.001;
+        lightCube.position.x = Math.sin(time) * 15;
+        lightCube.position.y = 20 + Math.sin(time * 1.5) * 5;
+        lightCube.position.z = Math.cos(time) * 15;
+
+        pointLight.position.copy(lightCube.position); // Sync point light with the light cube
+        requestAnimationFrame(animateLightCube);
+    }
+    animateLightCube();
+
+const hemisphereLight = new THREE.HemisphereLight(0xB1E1FF, 0xB97A20, 0.75);
+hemisphereLight.position.set(0, 50, 0);
+scene.add(hemisphereLight);
+
+let isHemisphereLightOn = true; // Track the light's state
+
+// Button Event Listener to Toggle Hemisphere Light
+document.getElementById('toggleHemisphereLight').addEventListener('click', function () {
+    if (isHemisphereLightOn) {
+        scene.remove(hemisphereLight); // Turn off the light
+    } else {
+        scene.add(hemisphereLight);    // Turn the light back on
+    }
+    isHemisphereLightOn = !isHemisphereLightOn; // Toggle state
+});
+
+    // Texture Loader
+    const textureLoaderBox = new THREE.TextureLoader();
+
+// Function to create a rock
+function createAsteroid() {
+    const geometry = new THREE.SphereGeometry(2, 16, 16);
+    const material = new THREE.MeshStandardMaterial({
+        color: 0x4B4B4B,  // Dark gray, better for asteroid-like color
+        roughness: 1,     // Maximized roughness for a matte, rocky surface
+        metalness: 0.1,   // Slight metallic effect for asteroid shine
+    });
+    const rock = new THREE.Mesh(geometry, material);
+
+    rock.scale.x = 0.3 + Math.random() * 1.5; // Random scaling in X
+    rock.scale.y = 1 + Math.random() * 1.5; // Random scaling in Y
+    rock.scale.z = 0.3 + Math.random() * 1.5; // Random scaling in Z
+
+    // Optional: random rotation for varied orientation
+    rock.rotation.x = Math.random() * Math.PI;
+    rock.rotation.y = Math.random() * Math.PI;
+    rock.rotation.z = Math.random() * Math.PI;
+
+    return rock;
+}
+
+// Add rocks to the scene
+for (let i = 0; i < 30; i++) {
+    const asteroid = createAsteroid();
+    asteroid.position.set(
+        Math.random() * 100 - 50,  // Increased range for X (wider spread)
+        Math.random() * 30 - 10,   // Randomized Y position for vertical variation
+        Math.random() * 100 - 50   // Increased range for Z (wider spread)
+    );
+    scene.add(asteroid);
+}
+
+createBillboard({ x: 15, y: 20, z: -40 }); // Example position for the billboard
+
+
+function createPyramid() {
+    const geometry = new THREE.ConeGeometry(5, 10, 4); // Base radius, height, 4 radial segments for a pyramid
+    const material = new THREE.MeshPhongMaterial({ color: 0xD2B48C }); // Sand-like color for a pyramid
+    const pyramid = new THREE.Mesh(geometry, material);
+
+    pyramid.scale.x = 1 + Math.random() * 2; // Random scaling in X
+    pyramid.scale.z = 1 + Math.random() * 2; // Random scaling in Z
+
+    // Align the base of the pyramid at y = -5
+    pyramid.position.y = 5 - 5;
+
+    // Optionally rotate for better pyramid alignment
+    pyramid.rotation.y = Math.random() * Math.PI * 2;
+
+    return pyramid;
+}
+
+for (let i = 0; i < 5; i++) {
+    const pyramid = createPyramid();
+    pyramid.position.set(
+        Math.random() * 200 - 100, // Increased X range for wider spread
+        0,                         // Y position; adjusted in the function
+        Math.random() * 200 - 100  // Increased Z range for deeper spread
+    );
+    scene.add(pyramid);
+}
+
+function createSpaceship(position = { x: 0, y: 0, z: 0 }) {
+    // Spaceship Body (Main Cylinder)
+    const bodyGeometry = new THREE.CylinderGeometry(1.5, 2.5, 8, 32);
+    const bodyMaterial = new THREE.MeshPhongMaterial({ color: 0xA9A9A9 });
+    const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+    body.position.set(position.x, position.y + 4, position.z);
+
+    // Spaceship Nose (Cone)
+    const noseGeometry = new THREE.ConeGeometry(1.5, 3, 32);
+    const noseMaterial = new THREE.MeshPhongMaterial({ color: 0xFF4500 }); // Bright orange for nose
+    const nose = new THREE.Mesh(noseGeometry, noseMaterial);
+    nose.position.set(position.x, position.y + 8, position.z);
+
+    // Spaceship Wings
+    const wingGeometry = new THREE.BoxGeometry(6, 0.2, 1.5);
+    const wingMaterial = new THREE.MeshPhongMaterial({ color: 0x696969 }); // Dark gray wings
+    const leftWing = new THREE.Mesh(wingGeometry, wingMaterial);
+    const rightWing = new THREE.Mesh(wingGeometry, wingMaterial);
+
+    leftWing.position.set(position.x - 3, position.y + 4, position.z);
+    rightWing.position.set(position.x + 3, position.y + 4, position.z);
+
+    // Spaceship Engines (Glowing Blue)
+    const engineGeometry = new THREE.CylinderGeometry(0.5, 0.5, 2, 32);
+    const engineMaterial = new THREE.MeshPhongMaterial({ 
+        color: 0x00BFFF, 
+        emissive: 0x00BFFF, 
+        emissiveIntensity: 1.5 
+    });
+
+    const leftEngine = new THREE.Mesh(engineGeometry, engineMaterial);
+    const rightEngine = new THREE.Mesh(engineGeometry, engineMaterial);
+
+    leftEngine.position.set(position.x - 1.5, position.y - 3, position.z);
+    rightEngine.position.set(position.x + 1.5, position.y - 3, position.z);
+
+    // Add parts to the scene
+    scene.add(body);
+    scene.add(nose);
+    scene.add(leftWing);
+    scene.add(rightWing);
+    scene.add(leftEngine);
+    scene.add(rightEngine);
+}
+
+createSpaceship({ x: 10, y: 10, z: 30 });
+createSpaceship({ x: 30, y: 10, z: 30 });
+createSpaceship({ x: -20, y: 10, z: 30 });
+
+const boxGeometry = new THREE.BoxGeometry(2, 2, 2);
+const texture = textureLoaderBox.load('../images/block.png', function(texture) {
+    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+    texture.offset.set(0, 0);
+    texture.repeat.set(4, 4);
+});
+const boxMaterial = new THREE.MeshPhongMaterial({ map: texture });
+const box = new THREE.Mesh(boxGeometry, boxMaterial);
+box.scale.set(5, 10, 5); // Scale the box
+box.position.set(-20, 0, 0);
+scene.add(box);
+
+function createCastleTower(position = { x: 0, y: 0, z: 0 }) {
+    // Water Tower Base (Support Legs)
+    const baseMaterial = new THREE.MeshPhongMaterial({ color: 0x8B4513 }); // Brown wood/metal
+    const baseGeometry = new THREE.CylinderGeometry(0.2, 0.2, 4, 8); // Thin support beams
+    const basePositions = [
+        [1.5, -2, 1.5], [-1.5, -2, 1.5], [1.5, -2, -1.5], [-1.5, -2, -1.5]
+    ];
+
+    basePositions.forEach(offset => {
+        const baseLeg = new THREE.Mesh(baseGeometry, baseMaterial);
+        baseLeg.position.set(position.x + offset[0], position.y + offset[1], position.z + offset[2]);
+        scene.add(baseLeg);
+    });
+
+    // Castle Tower (Main Cylinder)
+    const towerGeometry = new THREE.CylinderGeometry(2, 2, 10, 32);
+    const towerMaterial = new THREE.MeshPhongMaterial({ color: 0x8B8B83 }); // Stone grey
+    const tower = new THREE.Mesh(towerGeometry, towerMaterial);
+    tower.position.set(position.x, position.y + 5, position.z);
+    scene.add(tower);
+
+    // Castle Battlements (Top Crenellations)
+    const battlementGeometry = new THREE.BoxGeometry(0.8, 1, 0.8);
+    const battlementMaterial = new THREE.MeshPhongMaterial({ color: 0x8B8B83 });
+
+    const battlementPositions = [
+        [1.6, 10.5, 0], [-1.6, 10.5, 0], [0, 10.5, 1.6], [0, 10.5, -1.6],
+        [1.5, 10.5, 1.5], [-1.5, 10.5, -1.5]
+    ];
+
+    battlementPositions.forEach(offset => {
+        const battlement = new THREE.Mesh(battlementGeometry, battlementMaterial);
+        battlement.position.set(position.x + offset[0], position.y + offset[1], position.z + offset[2]);
+        scene.add(battlement);
+    });
+
+    // Castle Door
+    const doorGeometry = new THREE.BoxGeometry(1.2, 2, 0.1);
+    const doorMaterial = new THREE.MeshPhongMaterial({ color: 0x654321 }); // Wooden door
+    const door = new THREE.Mesh(doorGeometry, doorMaterial);
+    door.position.set(position.x, position.y + 1, position.z + 2.01);
+    scene.add(door);
+
+    // Castle Windows
+    const windowGeometry = new THREE.CircleGeometry(0.4, 16);
+    const windowMaterial = new THREE.MeshPhongMaterial({ color: 0x000000 });
+
+    const windowPositions = [
+        [0.8, 4, 2.01],
+        [-0.8, 4, 2.01]
+    ];
+
+    windowPositions.forEach(offset => {
+        const window = new THREE.Mesh(windowGeometry, windowMaterial);
+        window.position.set(position.x + offset[0], position.y + offset[1], position.z + offset[2]);
+        scene.add(window);
+    });
+
+    const flagGeometry = new THREE.PlaneGeometry(1.5, 1);
+    const flagMaterial = new THREE.MeshPhongMaterial({ color: 0xff0000, side: THREE.DoubleSide });
+    const flag = new THREE.Mesh(flagGeometry, flagMaterial);
+    flag.position.set(position.x, position.y + 11, position.z + 1);
+    flag.rotation.y = Math.PI / 4;
+    scene.add(flag);
+}
+
+createCastleTower({ x: 20, y: 0, z: 0 });
+createCastleTower({ x: -10, y: 0, z: -30 }); 
+createCastleTower({ x: 40, y: 0, z: -15 }); 
+
+    const textureLoader = new THREE.TextureLoader();
+    textureLoader.load('../images/globe.jpg', function(texture) {
+        const loader = new OBJLoader();
+        loader.load(
+            '../earth.obj',
+            function (object) {
+                object.traverse(function (child) {
+                    if (child instanceof THREE.Mesh) {
+                        child.material.map = texture;
+                        child.material.needsUpdate = true;
+                    }
+                });
+                object.position.set(2, 0, 0); // position to the right
+                object.scale.set(2, 2, 2);
+                scene.add(object);
+                renderer.render(scene, camera);
+            },
+            function (xhr) {
+                console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+            },
+            function (error) {
+                console.error('An error happened during the loading of the OBJ:', error);
+            }
+        );
+    });
+
+    function applyTexture(textureFile) {
+        if (textureFile) {
+            textureLoader.load(
+                textureFile,
+                function (texture) {
+                    scene.children.forEach(function (child) {
+                        if (child instanceof THREE.Mesh && child !== sphere && child !== box && child !== cylinder) {
+                            child.material.map = texture;
+                            child.material.needsUpdate = true;
+                        }
+                    });
+                    renderer.render(scene, camera);
+                }
+            );
+        }
+    }
+
+    const textureLoader1 = new THREE.TextureLoader();
+    textureLoader1.load('../images/jupiter.jpg', function(texture) {
+        const loader1 = new OBJLoader();
+        loader1.load(
+            '../jupiter.obj',
+            function (object) {
+                object.traverse(function (child) {
+                    if (child instanceof THREE.Mesh) {
+                        child.material.map = texture;
+                        child.material.needsUpdate = true;
+                    }
+                });
+                object.position.set(-25, 4, 20); 
+                object.scale.set(3, 3, 3);
+                scene.add(object);
+                renderer.render(scene, camera);
+            },
+            function (xhr) {
+                console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+            },
+            function (error) {
+                console.error('An error happened during the loading of the OBJ:', error);
+            }
+        );
+    });
+
+    function applyTexture1(textureFile) {
+        if (textureFile) {
+            textureLoader1.load(
+                textureFile,
+                function (texture) {
+                    scene.children.forEach(function (child) {
+                        if (child instanceof THREE.Mesh && child !== sphere && child !== box && child !== cylinder) {
+                            child.material.map = texture;
+                            child.material.needsUpdate = true;
+                        }
+                    });
+                    renderer.render(scene, camera);
+                }
+            );
+        }
+    }
+
+    scene.traverse(function (child) {
+    if (child instanceof THREE.Mesh) {
+        child.castShadow = true;
+        child.receiveShadow = true;
+    }
+});
+
+function animate() {
+    const now = performance.now();
+    const delta = now - lastTime;
+    lastTime = now;
+
+    const fps = Math.round(1000 / delta);
+    fpsDisplay.innerHTML = `FPS: ${fps}`;
+
+    controls.update();
+    renderer.render(scene, camera);
+    setTimeout(animate, 0); // Forces as many frames as possible
+}
+
+animate();
+
+// Fog Toggle Logic
+
+document.getElementById('toggleFog').addEventListener('click', function () {
+    if (isFogActive) {
+        scene.fog = null;  // Remove fog
+        renderer.setClearColor(0x87CEEB); // Sky color without fog
+    } else {
+        scene.fog = new THREE.FogExp2(0x87CEEB, 0.015); // Add fog back
+        renderer.setClearColor(scene.fog.color); // Sync background color
+    }
+    isFogActive = !isFogActive;  // Toggle state
+});
+
+
+// Store the initial camera position for reset
+const initialCameraPosition = camera.position.clone();
+const initialTargetPosition = controls.target.clone();
+
+// Reset Function
+function resetCamera() {
+    // Restore camera position
+    camera.position.copy(initialCameraPosition);
+
+    // Restore target (center of orbit controls)
+    controls.target.copy(initialTargetPosition);
+
+    // Ensure the camera faces the correct direction
+    camera.lookAt(controls.target);
+
+    // Update controls and camera
+    controls.update();
+
+    console.log("Camera reset to default position");
+}
+
+// Event Listener for the Reset Button
+document.getElementById('resetCamera').addEventListener('click', resetCamera);
+
+
+</script>
+
+<div id="fpsCounter"></div>
+
+</body>
+
+</html>
+<button id="toggleHemisphereLight">Toggle Light</button>
+<button id="resetCamera">Reset Camera</button>
+<button id="toggleFog">Toggle Fog</button>
+
+
+
